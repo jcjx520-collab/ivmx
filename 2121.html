@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>IVMX Investment Bot</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            min-height: 100vh;
+            background-color: #111827;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 3vh 0;
+            gap: 0.25vh;
+            font-family: 'Dubai', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow-x: hidden;
+        }
+        /* 通用卡片样式 */
+        .frame, .frame-bottom, .frame-extra, .frame-custom {
+            border-radius: 14px;
+            border: 1px solid #0A0A0A;
+            box-shadow:
+                0 1px 2px rgba(10, 10, 10, 0.15),
+                0 2px 6px rgba(10, 10, 10, 0.25),
+                0 4px 12px rgba(10, 10, 10, 0.3),
+                inset 0 1px 0 rgba(28, 39, 55, 0.2),
+                inset 0 -1px 2px rgba(10, 10, 10, 0.4);
+            position: relative;
+            padding: 3.5vh 5vw;
+        }
+        .frame {
+            background-color: #1C2737;
+            border-radius: 45px 45px 0 0;
+            height: 8vh;
+            width: 100vw;
+            max-width: 385px;
+            flex-shrink: 0;
+        }
+        .frame-bottom {
+            background-color: transparent;
+            height: 18.25vh;
+            width: 100vw;
+            max-width: 370px;
+            flex-shrink: 0;
+        }
+        .frame-extra {
+            background-color: #1C2737;
+            height: 6.5vh;
+            width: 100vw;
+            max-width: 370px;
+            flex-shrink: 0;
+        }
+        /* 新增：左右并排框架的包装器 */
+        .row-wrapper {
+            display: flex;
+            flex-direction: row;
+            gap: 2px;
+            width: 100vw;
+            max-width: 370px;
+            justify-content: space-between;
+            align-items: stretch;
+            flex-shrink: 0;
+        }
+        .left-frame {
+            flex: 1;
+            padding: 2vh 3vw;
+            position: relative;
+        }
+        .right-frame {
+            flex: 0 0 60px;
+            padding: 2vh 1vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+        }
+        .frame-custom {
+            background-color: #2D333A;
+            height: 11vh;
+            width: 100vw;
+            max-width: 370px;
+            position: relative;
+            flex-shrink: 0;
+        }
+        /* 所有 logo 框架（右框架）背景透明，只留边框 */
+        .row-wrapper .right-frame {
+            background-color: transparent;
+        }
+        /* 顶部标题与铃铛 */
+        .bot-title {
+            position: absolute;
+            top: 50%;
+            left: 1.5vw;
+            transform: translateY(-50%);
+            color: #E5E7EB;
+        }
+        .bot-title .ivmx {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        .bot-title .investment-bot {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .notification-bell {
+            position: absolute;
+            top: 50%;
+            right: 2vw;
+            transform: translateY(-50%);
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .notification-bell:hover {
+            transform: translateY(-50%) scale(1.15);
+        }
+        /* 账户信息 */
+        .subtitle {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #E5E7EB;
+            position: absolute;
+            top: 0.15vh;
+            left: 1.5vw;
+        }
+        .account-name {
+            font-size: 0.85rem;
+            color: #8A919D;
+            position: absolute;
+            top: 4.2vh;
+            left: 1.5vw;
+        }
+        .lim-text {
+            font-size: 1.15rem;
+            color: #FFFFFF;
+            position: absolute;
+            top: 5.5vh;
+            left: 1.5vw;
+        }
+        .account-id-label {
+            font-size: 0.85rem;
+            color: #8A919D;
+            position: absolute;
+            top: 8.7vh;
+            left: 1.5vw;
+        }
+        .account-id-value {
+            font-size: 1.1rem;
+            color: #FFFFFF;
+            position: absolute;
+            top: 10.2vh;
+            left: 1.5vw;
+        }
+        /* 新增：Bank Info样式 */
+        .bank-info-label {
+            font-size: 0.85rem;
+            color: #8A919D;
+            position: absolute;
+            top: 13.25vh;
+            left: 1.5vw;
+        }
+        .bank-info-value {
+            font-size: 1.1rem;
+            color: #FFFFFF;
+            position: absolute;
+            top: 14.8vh;
+            left: 1.5vw;
+        }
+        .verification-badge {
+            position: absolute;
+            top: 4.5vh;
+            right: 2vw;
+            border: 1px solid #8A919D;
+            border-radius: 4px;
+            padding: 0.5vh 0.5vw;
+            font-size: 0.7rem;
+            color: #8A919D;
+        }
+        /* 公用文本（标题） - 统一绝对定位水平居中对齐 */
+        .frame-text {
+            position: absolute;
+            top: 0vh;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            font-size: 1rem;
+            color: #8A919D;
+            text-align: center;
+        }
+        /* 分拆框架的标题 - 调整偏移，确保整体居中对齐 */
+        .left-frame .frame-text {
+            left: 50%;
+            transform: translateX(calc(-50% + 31px));
+        }
+        /* 公用数值 - 统一绝对定位水平居中对齐 */
+        .frame-value {
+            position: absolute;
+            top: 63.0%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            font-size: 2.0rem;
+            color: #FFFFFF;
+            text-align: center;
+        }
+        /* 分拆框架的数值 - 调整偏移，确保整体居中对齐 */
+        .left-frame .frame-value {
+            left: 50%;
+            transform: translate(calc(-50% + 31px), -50%);
+        }
+        .frame-text-pink {
+            color: #FF69B4;
+            font-size: 1rem;
+            position: absolute;
+            top: 0vh;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            text-align: center;
+        }
+        /* emoji 图标（用于右框架，居中大） */
+        .logo-emoji {
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            animation: pulse 2s infinite;
+        }
+        .logo-emoji:hover {
+            transform: scale(1.1);
+            animation-play-state: paused;
+        }
+        /* 脉冲动画定义 */
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+        
+        /* 新增：底部额外内容区域 */
+        .additional-content {
+            width: 100vw;
+            max-width: 370px;
+            padding: 2vh 0;
+            color: #E5E7EB;
+            text-align: center;
+        }
+        
+        .additional-section {
+            background-color: #1C2737;
+            border-radius: 14px;
+            padding: 3vh 3vw;
+            margin: 1vh 0;
+            border: 1px solid #0A0A0A;
+            box-shadow:
+                0 1px 2px rgba(10, 10, 10, 0.15),
+                0 2px 6px rgba(10, 10, 10, 0.25);
+        }
+
+        /* 新增：可点击框架样式 */
+        .clickable-frame {
+            background-color: #1C2737;
+            height: 6.5vh;
+            width: 100vw;
+            max-width: 370px;
+            position: relative;
+            flex-shrink: 0;
+            border-radius: 14px;
+            border: 1px solid #0A0A0A;
+            box-shadow:
+                0 1px 2px rgba(10, 10, 10, 0.15),
+                0 2px 6px rgba(10, 10, 10, 0.25),
+                0 4px 12px rgba(10, 10, 10, 0.3),
+                inset 0 1px 0 rgba(28, 39, 55, 0.2),
+                inset 0 -1px 2px rgba(10, 10, 10, 0.4);
+            padding: 3.5vh 3vw;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .clickable-frame:hover {
+            background-color: #253142;
+            transform: translateY(-2px);
+            box-shadow:
+                0 3px 6px rgba(10, 10, 10, 0.2),
+                0 6px 12px rgba(10, 10, 10, 0.3),
+                0 8px 16px rgba(10, 10, 10, 0.35);
+        }
+
+        .clickable-frame:active {
+            transform: translateY(0);
+        }
+
+        .clickable-text {
+            position: absolute;
+            top: 0vh;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            font-size: 1rem;
+            color: #8A919D;
+            text-align: center;
+            text-decoration: underline;
+            text-decoration-color: #4B5563;
+            text-underline-offset: 2px;
+        }
+
+        .clickable-value {
+            position: absolute;
+            top: 63.0%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            font-size: 2.0rem;
+            color: #FFFFFF;
+            text-align: center;
+        }
+
+        /* 简化的 Transaction History 样式 */
+        .transaction-history-simple {
+            background-color: #1C2737;
+            height: 25vh;
+            width: 100vw;
+            max-width: 370px;
+            border-radius: 14px;
+            border: 1px solid #0A0A0A;
+            box-shadow:
+                0 1px 2px rgba(10, 10, 10, 0.15),
+                0 2px 6px rgba(10, 10, 10, 0.25),
+                0 4px 12px rgba(10, 10, 10, 0.3),
+                inset 0 1px 0 rgba(28, 39, 55, 0.2),
+                inset 0 -1px 2px rgba(10, 10, 10, 0.4);
+            padding: 2vh 3vw;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .transaction-header-simple {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5vh;
+        }
+
+        .transaction-title-simple {
+            font-size: 1rem;
+            color: #FF69B4;
+            font-weight: 600;
+        }
+
+        .view-all {
+            font-size: 0.8rem;
+            color: #8A919D;
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .view-all:hover {
+            color: #E5E7EB;
+        }
+
+        .transaction-table-simple {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #4B5563 #1C2737;
+        }
+
+        /* 自定义滚动条样式 */
+        .transaction-table-simple::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .transaction-table-simple::-webkit-scrollbar-track {
+            background: #1C2737;
+            border-radius: 3px;
+        }
+
+        .transaction-table-simple::-webkit-scrollbar-thumb {
+            background: #4B5563;
+            border-radius: 3px;
+        }
+
+        .transaction-table-simple::-webkit-scrollbar-thumb:hover {
+            background: #6B7280;
+        }
+
+        .table-header-simple {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr 0.8fr;
+            gap: 1vw;
+            padding: 1vh 0.5vw;
+            border-bottom: 1px solid #2D3748;
+            font-size: 0.75rem;
+            color: #8A919D;
+            font-weight: 500;
+        }
+
+        .table-row-simple {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr 0.8fr;
+            gap: 1vw;
+            padding: 1.2vh 0.5vw;
+            border-bottom: 1px solid #2D3748;
+            font-size: 0.8rem;
+            align-items: center;
+        }
+
+        .table-row-simple:last-child {
+            border-bottom: none;
+        }
+
+        .transaction-date-simple {
+            color: #E5E7EB;
+            font-size: 0.75rem;
+        }
+
+        .transaction-type-simple {
+            color: #E5E7EB;
+            font-weight: 500;
+        }
+
+        .transaction-amount-simple {
+            color: #10B981;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .transaction-amount-simple.negative {
+            color: #EF4444;
+        }
+
+        .transaction-status-simple {
+            font-size: 0.7rem;
+            padding: 0.3vh 1vw;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .status-completed {
+            background-color: #10B98120;
+            color: #10B981;
+        }
+
+        .status-pending {
+            background-color: #F59E0B20;
+            color: #F59E0B;
+        }
+
+        /* 完整的 Transaction History 样式（默认隐藏） */
+        .transaction-history-full {
+            background-color: #1C2737;
+            height: 50vh;
+            width: 100vw;
+            max-width: 370px;
+            border-radius: 14px;
+            border: 1px solid #0A0A0A;
+            box-shadow:
+                0 1px 2px rgba(10, 10, 10, 0.15),
+                0 2px 6px rgba(10, 10, 10, 0.25),
+                0 4px 12px rgba(10, 10, 10, 0.3),
+                inset 0 1px 0 rgba(28, 39, 55, 0.2),
+                inset 0 -1px 2px rgba(10, 10, 10, 0.4);
+            padding: 2vh 3vw;
+            display: none;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .filter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh;
+            margin-bottom: 2vh;
+        }
+
+        .filter-row {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 2vw;
+        }
+
+        .filter-label {
+            font-size: 0.85rem;
+            color: #8A919D;
+            font-weight: 500;
+            min-width: 100px;
+            text-align: right;
+        }
+
+        .filter-dropdown {
+            background-color: #2D3748;
+            border: 1px solid #4B5563;
+            border-radius: 8px;
+            padding: 1vh 2vw;
+            color: #E5E7EB;
+            font-size: 0.8rem;
+            cursor: pointer;
+            min-width: 140px;
+            flex-shrink: 0;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%238A919D' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
+        }
+
+        .filter-dropdown option {
+            background-color: #2D3748;
+            color: #E5E7EB;
+            padding: 8px;
+        }
+
+        .transaction-summary {
+            font-size: 0.9rem;
+            color: #E5E7EB;
+            margin-bottom: 1.5vh;
+            font-weight: 500;
+            padding-left: 100px;
+        }
+
+        .transaction-table-full {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #4B5563 #1C2737;
+        }
+
+        .table-header-full {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr 0.8fr 1.2fr;
+            gap: 1vw;
+            padding: 1.5vh 0.5vw;
+            border-bottom: 2px solid #2D3748;
+            font-size: 0.75rem;
+            color: #8A919D;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            background-color: #1C2737;
+            z-index: 1;
+        }
+
+        .table-row-full {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr 0.8fr 1.2fr;
+            gap: 1vw;
+            padding: 1.8vh 0.5vw;
+            border-bottom: 1px solid #2D3748;
+            font-size: 0.75rem;
+            align-items: center;
+        }
+
+        .table-row-full:last-child {
+            border-bottom: none;
+        }
+
+        .transaction-datetime {
+            color: #E5E7EB;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .transaction-date {
+            font-weight: 500;
+        }
+
+        .transaction-time {
+            font-size: 0.7rem;
+            color: #8A919D;
+            margin-top: 0.3vh;
+        }
+
+        .transaction-type {
+            color: #E5E7EB;
+            font-weight: 500;
+        }
+
+        .transaction-amount {
+            color: #10B981;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .transaction-amount.negative {
+            color: #EF4444;
+        }
+
+        .transaction-status {
+            font-size: 0.7rem;
+            padding: 0.4vh 1vw;
+            border-radius: 8px;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .transaction-reference {
+            color: #8A919D;
+            font-size: 0.7rem;
+            font-family: monospace;
+        }
+
+        /* X Bot Live 样式 */
+        .x-bot-live {
+            background-color: #1C2737;
+            width: 100vw;
+            max-width: 370px;
+            border-radius: 14px;
+            border: 1px solid #0A0A0A;
+            box-shadow:
+                0 1px 2px rgba(10, 10, 10, 0.15),
+                0 2px 6px rgba(10, 10, 10, 0.25),
+                0 4px 12px rgba(10, 10, 10, 0.3),
+                inset 0 1px 0 rgba(28, 39, 55, 0.2),
+                inset 0 -1px 2px rgba(10, 10, 10, 0.4);
+            padding: 10px;
+            margin: 5px 0;
+            flex-shrink: 0;
+        }
+
+        .x-bot-live h2 {
+            color: #E5E7EB;
+            text-align: center;
+            font-size: 12px;
+            margin: 5px 0;
+        }
+
+        .x-bot-chart-container {
+            height: 200px;
+            margin: 5px auto;
+            background-color: #2D3748;
+            border-radius: 6px;
+            padding: 5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .x-bot-chart-container::before {
+            content: 'X Bot';
+            position: absolute;
+            bottom: 22px;
+            right: 8px;
+            font-family: Arial, monospace;
+            font-size: 95px;
+            font-weight: 800;
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.05);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .x-bot-stats-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #2D3748;
+            padding: 5px;
+            border-radius: 6px;
+            margin-top: 5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+
+        .x-bot-stat-item {
+            text-align: center;
+            flex: 1;
+            min-width: 60px;
+            margin: 2px;
+        }
+
+        .x-bot-stat-label {
+            font-size: 8px;
+            color: #8A919D;
+            margin-bottom: 1px;
+        }
+
+        .x-bot-asset-display {
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .x-bot-profit {
+            color: #3b82f6;
+            animation: pulse 0.3s;
+        }
+
+        .x-bot-loss {
+            color: #ff0000;
+            animation: pulse 0.3s;
+        }
+
+        .x-bot-daily-percent {
+            font-size: 12px;
+            color: #8A919D;
+            transition: color 0.3s;
+        }
+
+        .x-bot-daily-percent.profit {
+            color: #3b82f6;
+        }
+
+        .x-bot-daily-percent.loss {
+            color: #ff0000;
+        }
+
+        .x-bot-total-asset {
+            color: #E5E7EB;
+        }
+
+        /* 浮动客服按钮样式 */
+        .floating-customer-service {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.3s ease;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .floating-customer-service:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
+        }
+
+        .floating-customer-service:active {
+            transform: scale(0.95);
+        }
+
+        .floating-customer-service .icon {
+            font-size: 24px;
+            color: white;
+        }
+
+        .floating-customer-service .tooltip {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            background-color: #1C2737;
+            color: #E5E7EB;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            border: 1px solid #2D3748;
+        }
+
+        .floating-customer-service:hover .tooltip {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-5px);
+            }
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        /* 客服对话框样式 */
+        .customer-service-modal {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 300px;
+            background-color: #1C2737;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 1001;
+            display: none;
+            flex-direction: column;
+            border: 1px solid #2D3748;
+            overflow: hidden;
+        }
+
+        .customer-service-modal.active {
+            display: flex;
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            padding: 15px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .close-modal:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-body {
+            padding: 15px;
+            flex: 1;
+        }
+
+        .contact-option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 10px;
+            background-color: #2D3748;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .contact-option:hover {
+            background-color: #374151;
+        }
+
+        .contact-option .icon {
+            margin-right: 10px;
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .contact-option .text {
+            flex: 1;
+        }
+
+        .contact-option .title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #E5E7EB;
+        }
+
+        .contact-option .description {
+            font-size: 12px;
+            color: #8A919D;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="frame">
+        <div class="bot-title">
+            <span class="ivmx">IVMX</span>
+            <span class="investment-bot"> Investment Bot</span>
+        </div>
+        <div class="notification-bell" title="消息通知">🔔</div>
+    </div>
+    <div class="frame-bottom">
+        <h3 class="subtitle">Account Summary</h3>
+        <p class="account-name">Account Name</p>
+        <div class="verification-badge">未实名认证</div>
+        <p class="lim-text">Lim xxx xxxx</p>
+        <p class="account-id-label">Account ID</p>
+        <p class="account-id-value">01x - xxxxxxxxx</p>
+        <p class="bank-info-label">Bank Info</p>
+        <p class="bank-info-value">Maybank 1015xxxxxxxxx</p>
+    </div>
+    
+    <div class="row-wrapper">
+        <div class="frame-extra left-frame">
+            <p class="frame-text">Investment Capital</p>
+            <p class="frame-value">$0.00</p>
+        </div>
+        <div class="frame-extra right-frame">
+            <div class="logo-emoji" title="充值">💳</div>
+        </div>
+    </div>
+    
+    <div class="row-wrapper">
+        <div class="frame-extra left-frame">
+            <p class="frame-text">Account Balance</p>
+            <p class="frame-value">$0.00</p>
+        </div>
+        <div class="frame-extra right-frame">
+            <div class="logo-emoji" title="提款">💵</div>
+        </div>
+    </div>
+    
+    <div class="row-wrapper">
+        <div class="frame-extra left-frame">
+            <p class="frame-text">Referral Bonus 5%</p>
+            <p class="frame-value">$0.00</p>
+        </div>
+        <div class="frame-extra right-frame">
+            <div class="logo-emoji" title="提款">💵</div>
+        </div>
+    </div>
+    
+    <div class="row-wrapper">
+        <div class="frame-extra left-frame">
+            <p class="frame-text">4D Betting</p>
+            <p class="frame-value">$0.00</p>
+        </div>
+        <div class="frame-extra right-frame">
+            <div class="logo-emoji" title="4D投注">✍🏻</div>
+        </div>
+    </div>
+    
+    <div class="clickable-frame" onclick="openReferrals()">
+        <p class="clickable-text">Referrals / Team Members</p>
+        <p class="clickable-value">0 / 0</p>
+    </div>
+    
+    <div class="clickable-frame" onclick="openTeamAssets()">
+        <p class="clickable-text">Team Total Assets</p>
+        <p class="clickable-value">$0.00</p>
+    </div>
+    
+    <div class="clickable-frame" onclick="openAboutUs()">
+        <p class="clickable-text">About Us</p>
+        <p class="clickable-value"></p>
+    </div>
+    
+    <div class="frame-custom">
+        <p class="frame-text-pink">Lucky Draw Progress</p>
+    </div>
+    
+    <!-- 简化的 Transaction History 框架（默认显示） -->
+    <div class="transaction-history-simple" id="simpleTransactionHistory">
+        <div class="transaction-header-simple">
+            <div class="transaction-title-simple">Recent Transactions</div>
+            <div class="view-all" onclick="showFullTransactionHistory()">View All</div>
+        </div>
+        <div class="transaction-table-simple">
+            <div class="table-header-simple">
+                <div>Date</div>
+                <div>Type</div>
+                <div>Amount</div>
+                <div>Status</div>
+            </div>
+            <div id="transactionTableSimple"></div>
+        </div>
+    </div>
+    
+    <!-- 完整的 Transaction History 框架（默认隐藏） -->
+    <div class="transaction-history-full" id="fullTransactionHistory">
+        <div class="filter-section">
+            <div class="filter-row">
+                <div class="filter-label">Filter by Type</div>
+                <select class="filter-dropdown" id="typeFilter" onchange="filterTransactions()">
+                    <option value="all">All Types</option>
+                    <option value="earnings">Earnings</option>
+                    <option value="deposit">Deposit</option>
+                    <option value="withdrawal">Withdrawal</option>
+                    <option value="referral">Referral Bonus</option>
+                    <option value="investment">Investment Return</option>
+                    <option value="4d">4D Betting</option>
+                </select>
+            </div>
+            <div class="filter-row">
+                <div class="filter-label">Filter by Status</div>
+                <select class="filter-dropdown" id="statusFilter" onchange="filterTransactions()">
+                    <option value="all">All Status</option>
+                    <option value="completed">Completed</option>
+                    <option value="pending">Pending</option>
+                    <option value="failed">Failed</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="transaction-summary" id="transactionSummary">All Transactions (20)</div>
+        
+        <div class="transaction-table-full">
+            <div class="table-header-full">
+                <div>Date & Time</div>
+                <div>Type</div>
+                <div>Amount</div>
+                <div>Status</div>
+                <div>Reference</div>
+            </div>
+            <div id="transactionTableFull"></div>
+        </div>
+    </div>
+    
+    <!-- X Bot Live 框架 -->
+    <div class="x-bot-live">
+        <h2>IVMX公司盈利实时报表（Live）</h2>
+        <div class="x-bot-chart-container">
+            <canvas id="xBotProfitChart"></canvas>
+        </div>
+        <div class="x-bot-stats-row">
+            <div class="x-bot-stat-item">
+                <div class="x-bot-stat-label">总资产</div>
+                <div id="x-bot-total-asset" class="x-bot-asset-display x-bot-total-asset">151,089.18</div>
+            </div>
+            <div class="x-bot-stat-item">
+                <div class="x-bot-stat-label">盈利(蓝)</div>
+                <div id="x-bot-profit-amt" class="x-bot-asset-display x-bot-profit">0.00</div>
+            </div>
+            <div class="x-bot-stat-item">
+                <div class="x-bot-stat-label">亏损(红)</div>
+                <div id="x-bot-loss-amt" class="x-bot-asset-display x-bot-loss">0.00</div>
+            </div>
+            <div class="x-bot-stat-item">
+                <div class="x-bot-stat-label">共盈利</div>
+                <div id="x-bot-daily-percent" class="x-bot-daily-percent">0.00</div> %
+            </div>
+        </div>
+    </div>
+    
+    <div class="additional-content">
+        <div class="additional-section">
+            <h3>更多内容区域</h3>
+            <p>这里可以放置其他内容...</p>
+        </div>
+        <div class="additional-section">
+            <h3>另一个内容区块</h3>
+            <p>继续添加更多内容...</p>
+        </div>
+    </div>
+
+    <!-- 浮动客服按钮 -->
+    <div class="floating-customer-service" onclick="toggleCustomerServiceModal()">
+        <div class="icon">💬</div>
+        <div class="tooltip">联系客服</div>
+    </div>
+
+    <!-- 客服对话框 -->
+    <div class="customer-service-modal" id="customerServiceModal">
+        <div class="modal-header">
+            <h3>联系客服</h3>
+            <button class="close-modal" onclick="toggleCustomerServiceModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="contact-option" onclick="contactViaWhatsApp()">
+                <div class="icon">📱</div>
+                <div class="text">
+                    <div class="title">WhatsApp</div>
+                    <div class="description">即时消息支持</div>
+                </div>
+            </div>
+            <div class="contact-option" onclick="contactViaTelegram()">
+                <div class="icon">✈️</div>
+                <div class="text">
+                    <div class="title">Telegram</div>
+                    <div class="description">快速响应支持</div>
+                </div>
+            </div>
+            <div class="contact-option" onclick="contactViaEmail()">
+                <div class="icon">✉️</div>
+                <div class="text">
+                    <div class="title">电子邮件</div>
+                    <div class="description">24小时内回复</div>
+                </div>
+            </div>
+            <div class="contact-option" onclick="contactViaPhone()">
+                <div class="icon">📞</div>
+                <div class="text">
+                    <div class="title">电话支持</div>
+                    <div class="description">工作日 9:00-18:00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openReferrals() {
+            alert('打开推荐/团队成员页面');
+        }
+
+        function openTeamAssets() {
+            alert('打开团队总资产页面');
+        }
+
+        function openAboutUs() {
+            alert('打开关于我们页面');
+        }
+
+        // 交易数据
+        const allTransactions = [
+            { date: "2024-01-15", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001234" },
+            { date: "2024-01-14", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001233" },
+            { date: "2024-01-13", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001232" },
+            { date: "2024-01-12", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001231" },
+            { date: "2024-01-11", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001230" },
+            { date: "2024-01-10", time: "10:15", type: "Deposit", amount: 50000, status: "completed", reference: "TXN001229" },
+            { date: "2024-01-09", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001228" },
+            { date: "2024-01-08", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001227" },
+            { date: "2024-01-07", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001226" },
+            { date: "2024-01-06", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001225" },
+            { date: "2024-01-05", time: "09:45", type: "Deposit", amount: 50000, status: "completed", reference: "TXN001224" },
+            { date: "2024-01-04", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001223" },
+            { date: "2024-01-03", time: "16:20", type: "Withdrawal", amount: -5000, status: "pending", reference: "TXN001222" },
+            { date: "2024-01-02", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001221" },
+            { date: "2024-01-01", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001220" },
+            { date: "2023-12-31", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001219" },
+            { date: "2023-12-30", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001218" },
+            { date: "2023-12-29", time: "11:30", type: "Deposit", amount: 25000, status: "completed", reference: "TXN001217" },
+            { date: "2023-12-28", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001216" },
+            { date: "2023-12-27", time: "14:30", type: "Earnings", amount: 1000, status: "completed", reference: "TXN001215" }
+        ];
+
+        // 生成简化交易记录表格（显示最近5条）
+        function generateSimpleTransactionTable() {
+            const transactionTable = document.getElementById('transactionTableSimple');
+            transactionTable.innerHTML = '';
+            
+            const recentTransactions = allTransactions.slice(0, 5);
+            
+            recentTransactions.forEach(transaction => {
+                const row = document.createElement('div');
+                row.className = 'table-row-simple';
+                
+                const amountClass = transaction.amount >= 0 ? '' : 'negative';
+                const statusClass = `transaction-status-simple status-${transaction.status}`;
+                const statusText = transaction.status === 'completed' ? 'Completed' : 
+                                 transaction.status === 'pending' ? 'Pending' : 'Failed';
+                
+                const amountPrefix = transaction.amount >= 0 ? '+' : '';
+                const amountDisplay = `RM ${Math.abs(transaction.amount).toLocaleString()}`;
+                
+                row.innerHTML = `
+                    <div class="transaction-date-simple">${transaction.date}</div>
+                    <div class="transaction-type-simple">${transaction.type}</div>
+                    <div class="transaction-amount-simple ${amountClass}">${amountPrefix}${amountDisplay}</div>
+                    <div class="${statusClass}">${statusText}</div>
+                `;
+                
+                transactionTable.appendChild(row);
+            });
+        }
+
+        // 生成完整交易记录表格
+        function generateFullTransactionTable(transactions) {
+            const transactionTable = document.getElementById('transactionTableFull');
+            transactionTable.innerHTML = '';
+            
+            transactions.forEach(transaction => {
+                const row = document.createElement('div');
+                row.className = 'table-row-full';
+                
+                const amountClass = transaction.amount >= 0 ? '' : 'negative';
+                const statusClass = `transaction-status status-${transaction.status}`;
+                const statusText = transaction.status === 'completed' ? 'Completed' : 
+                                 transaction.status === 'pending' ? 'Pending' : 'Failed';
+                
+                const amountPrefix = transaction.amount >= 0 ? '+' : '';
+                const amountDisplay = `RM ${Math.abs(transaction.amount).toLocaleString()}`;
+                
+                row.innerHTML = `
+                    <div class="transaction-datetime">
+                        <div class="transaction-date">${transaction.date}</div>
+                        <div class="transaction-time">${transaction.time}</div>
+                    </div>
+                    <div class="transaction-type">${transaction.type}</div>
+                    <div class="transaction-amount ${amountClass}">${amountPrefix}${amountDisplay}</div>
+                    <div class="${statusClass}">${statusText}</div>
+                    <div class="transaction-reference">${transaction.reference}</div>
+                `;
+                
+                transactionTable.appendChild(row);
+            });
+            
+            document.getElementById('transactionSummary').textContent = `All Transactions (${transactions.length})`;
+        }
+
+        // 显示完整交易历史
+        function showFullTransactionHistory() {
+            document.getElementById('simpleTransactionHistory').style.display = 'none';
+            document.getElementById('fullTransactionHistory').style.display = 'flex';
+            generateFullTransactionTable(allTransactions);
+        }
+
+        // 筛选交易记录
+        function filterTransactions() {
+            const typeFilter = document.getElementById('typeFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            let filteredTransactions = allTransactions;
+            
+            if (typeFilter !== 'all') {
+                filteredTransactions = filteredTransactions.filter(transaction => {
+                    const typeMap = {
+                        'earnings': 'Earnings',
+                        'deposit': 'Deposit',
+                        'withdrawal': 'Withdrawal',
+                        'referral': 'Referral Bonus',
+                        'investment': 'Investment Return',
+                        '4d': '4D Betting'
+                    };
+                    return transaction.type === typeMap[typeFilter];
+                });
+            }
+            
+            if (statusFilter !== 'all') {
+                filteredTransactions = filteredTransactions.filter(transaction => 
+                    transaction.status === statusFilter
+                );
+            }
+            
+            generateFullTransactionTable(filteredTransactions);
+        }
+
+        // 页面加载时生成简化交易记录
+        document.addEventListener('DOMContentLoaded', generateSimpleTransactionTable);
+
+        // X Bot Live 功能
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化
+            let capital = 151089.18;
+            let currentProfit = 0.0;
+            let currentLoss = 0.0;
+            let dailyPercent = 0.0;
+            let dailyTargetIncrease = 0.0; // 当天目标增幅
+            let dailyProgress = 0.0; // 当天净增
+            let initialDailyCapital = capital; // 当天初始资本
+            let chartData = { 
+                labels: [],
+                datasets: [{ 
+                    label: '资产曲线', 
+                    data: [151089.18],
+                    borderColor: 'rgba(16, 185, 129, 1)', 
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)', 
+                    tension: 0.4, 
+                    fill: true 
+                }] 
+            };
+            
+            // 创建图表
+            const ctx = document.getElementById('xBotProfitChart').getContext('2d');
+            let chart = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    scales: { 
+                        x: { display: false },
+                        y: { 
+                            beginAtZero: false, 
+                            ticks: { 
+                                font: { size: 10 },
+                                callback: function(value) {
+                                    return 'RM ' + value.toLocaleString();
+                                }
+                            } 
+                        } 
+                    }, 
+                    plugins: { 
+                        legend: { display: false },
+                        title: { display: false } 
+                    },
+                    animation: { duration: 300 }
+                }
+            });
+            
+            let lastTradeTime = Date.now();
+            let lastPercentTime = Date.now();
+            let lastChartTime = Date.now();
+            let lastMidnight = new Date().setHours(0, 0, 0, 0);
+            let isNewDay = true;
+            let dailyTargetPercent = 0.0; // 当天目标百分比
+
+            // 更新显示
+            function updateDisplay(change, isProfit) {
+                capital += change;
+                dailyProgress += change;
+                if (isProfit) {
+                    currentProfit = change;
+                    currentLoss = 0.0;
+                    document.getElementById('x-bot-profit-amt').textContent = currentProfit.toFixed(2);
+                    document.getElementById('x-bot-profit-amt').classList.add('x-bot-profit');
+                    document.getElementById('x-bot-loss-amt').textContent = '0.00';
+                    document.getElementById('x-bot-loss-amt').classList.remove('x-bot-loss');
+                    document.getElementById('x-bot-total-asset').classList.add('x-bot-profit');
+                    document.getElementById('x-bot-total-asset').classList.remove('x-bot-loss');
+                } else {
+                    currentLoss = Math.abs(change);
+                    currentProfit = 0.0;
+                    document.getElementById('x-bot-loss-amt').textContent = currentLoss.toFixed(2);
+                    document.getElementById('x-bot-loss-amt').classList.add('x-bot-loss');
+                    document.getElementById('x-bot-profit-amt').textContent = '0.00';
+                    document.getElementById('x-bot-profit-amt').classList.remove('x-bot-profit');
+                    document.getElementById('x-bot-total-asset').classList.add('x-bot-loss');
+                    document.getElementById('x-bot-total-asset').classList.remove('x-bot-profit');
+                }
+                document.getElementById('x-bot-total-asset').textContent = capital.toFixed(2);
+            }
+
+            // 更新%
+            function updatePercent() {
+                const now = new Date();
+                const isMidnight = now.getHours() === 0 && now.getMinutes() === 0 && now.getSeconds() === 0;
+                
+                // 检查是否是新的一天
+                if (isMidnight || (Date.now() - lastMidnight > 24*60*60*1000) || isNewDay) {
+                    // 新一天：重置
+                    dailyTargetPercent = 0.0095 + Math.random() * 0.0035; // 0.95% to 1.3%目标
+                    dailyTargetIncrease = initialDailyCapital * dailyTargetPercent;
+                    dailyPercent = 0.0;
+                    dailyProgress = 0;
+                    currentProfit = 0;
+                    currentLoss = 0;
+                    initialDailyCapital = capital;
+                    lastMidnight = now.getTime();
+                    isNewDay = false;
+                    document.getElementById('x-bot-profit-amt').textContent = '0.00';
+                    document.getElementById('x-bot-loss-amt').textContent = '0.00';
+                    document.getElementById('x-bot-daily-percent').classList.remove('x-bot-profit', 'x-bot-loss');
+                } else {
+                    // 净%：(dailyProgress / initialDailyCapital) * 100
+                    dailyPercent = (dailyProgress / initialDailyCapital) * 100;
+                    if (dailyPercent > 0) {
+                        document.getElementById('x-bot-daily-percent').classList.add('x-bot-profit');
+                        document.getElementById('x-bot-daily-percent').classList.remove('x-bot-loss');
+                    } else if (dailyPercent < 0) {
+                        document.getElementById('x-bot-daily-percent').classList.add('x-bot-loss');
+                        document.getElementById('x-bot-daily-percent').classList.remove('x-bot-profit');
+                    } else {
+                        document.getElementById('x-bot-daily-percent').classList.remove('x-bot-profit', 'x-bot-loss');
+                    }
+                }
+                document.getElementById('x-bot-daily-percent').textContent = Math.abs(dailyPercent).toFixed(2);
+            }
+
+            // 生成交易（65%盈利，35%亏损）
+            function generateTrade() {
+                const isProfit = Math.random() < 0.65; // 65% 盈利
+                let step;
+                
+                if (isProfit) {
+                    // 盈利：1-11元
+                    step = Math.random() * 10 + 1;
+                } else {
+                    // 亏损：-1到-11元
+                    step = -(Math.random() * 10 + 1);
+                }
+                
+                // 保留两位小数
+                step = parseFloat(step.toFixed(2));
+                
+                updateDisplay(step, isProfit);
+                chartData.labels.push('');
+                if (chartData.labels.length > 10) { 
+                    chartData.labels.shift(); 
+                    chartData.datasets[0].data.shift(); 
+                }
+                chartData.datasets[0].data.push(capital);
+                chart.update('none');
+            }
+
+            // 浮动图表
+            function floatChart() {
+                const lastIdx = chartData.datasets[0].data.length - 1;
+                if (lastIdx > 0) {
+                    const float = (Math.random() - 0.5) * 10;
+                    chartData.datasets[0].data[lastIdx] += float;
+                    chart.update('active');
+                }
+            }
+
+            // 主循环（5-15秒跳）
+            setInterval(() => {
+                const now = Date.now();
+
+                // 5-15秒 交易
+                const delay = (Math.random() * 10 + 5) * 1000;
+                if (now - lastTradeTime > delay) {
+                    generateTrade();
+                    lastTradeTime = now;
+                }
+
+                // 5-15秒 %
+                const percentDelay = (Math.random() * 10 + 5) * 1000;
+                if (now - lastPercentTime > percentDelay) {
+                    updatePercent();
+                    lastPercentTime = now;
+                }
+
+                // 5-15秒 图表浮动
+                const chartDelay = (Math.random() * 10 + 5) * 1000;
+                if (now - lastChartTime > chartDelay) {
+                    floatChart();
+                    lastChartTime = now;
+                }
+
+                updatePercent();
+            }, 1000);
+
+            // 启动
+            updateDisplay(0, true);
+            updatePercent();
+        });
+
+        // 客服功能
+        function toggleCustomerServiceModal() {
+            const modal = document.getElementById('customerServiceModal');
+            modal.classList.toggle('active');
+        }
+
+        function contactViaWhatsApp() {
+            alert('正在打开 WhatsApp 客服...\n客服号码: +60 12-345 6789');
+        }
+
+        function contactViaTelegram() {
+            alert('正在打开 Telegram 客服...\n用户名: @IVMX_Support');
+        }
+
+        function contactViaEmail() {
+            alert('正在打开邮件客户端...\n客服邮箱: support@ivmx.com');
+        }
+
+        function contactViaPhone() {
+            alert('正在拨打电话...\n客服热线: 1-800-123-4567');
+        }
+
+        // 点击页面其他地方关闭客服对话框
+        document.addEventListener('click', function(event) {
+            const modal = document.getElementById('customerServiceModal');
+            const button = document.querySelector('.floating-customer-service');
+            
+            if (modal.classList.contains('active') && 
+                !modal.contains(event.target) && 
+                !button.contains(event.target)) {
+                modal.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
